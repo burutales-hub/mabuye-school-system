@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Dashboard - Mabuye Junior School</title>
+    <style>
+        :root { --primary: #1e293b; --accent: #3b82f6; --bg: #f8fafc; --card: #ffffff; --text: #334155; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: var(--bg); color: var(--text); margin: 0; padding: 20px; }
+        .container { max-width: 1100px; margin: auto; background: var(--card); padding: 35px; border-radius: 12px; box-shadow: 0 10px 25px rgba(0,0,0,0.05); }
+        .header { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #e2e8f0; padding-bottom: 20px; margin-bottom: 25px; }
+        .header h1 { margin: 0; color: var(--primary); font-size: 26px; }
+        
+        .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; margin-bottom: 30px; }
+        .stat-card { background: #f1f5f9; padding: 20px; border-radius: 8px; border-left: 5px solid var(--accent); }
+        .stat-card h3 { margin: 0 0 8px 0; font-size: 13px; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px; }
+        .stat-card p { margin: 0; font-size: 24px; font-weight: 700; color: var(--primary); }
+
+        .nav-links { margin-top: 25px; display: flex; gap: 12px; flex-wrap: wrap; }
+        .btn { background: #3b82f6; color: white; padding: 12px 20px; text-decoration: none; border-radius: 6px; font-weight: 600; font-size: 14px; transition: background 0.2s; }
+        .btn:hover { background: #2563eb; }
+        .report-btn { background: #10b981; }
+        .report-btn:hover { background: #059669; }
+        .analysis-btn { background: #f59e0b; }
+        .analysis-btn:hover { background: #d97706; }
+        .logout-btn { background: #ef4444; }
+        .logout-btn:hover { background: #dc2626; }
+
+        section { margin-top: 35px; padding-top: 20px; border-top: 1px solid #e2e8f0; }
+        section h2 { color: var(--primary); font-size: 18px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div>
+                <h1>Mabuye Junior School</h1>
+                <p style="margin: 5px 0 0 0; color: #64748b; font-size: 14px;">Administrator Control Panel</p>
+            </div>
+            <a href="/login.html" class="btn logout-btn">Logout</a>
+        </div>
+
+        <div class="stats-grid">
+            <div class="stat-card" style="border-left-color: #3b82f6;">
+                <h3>Total Students</h3>
+                <p id="statStudents">-</p>
+            </div>
+            <div class="stat-card" style="border-left-color: #10b981;">
+                <h3>Total Teachers</h3>
+                <p id="statTeachers">-</p>
+            </div>
+            <div class="stat-card" style="border-left-color: #f59e0b;">
+                <h3>Total Subjects</h3>
+                <p id="statSubjects">-</p>
+            </div>
+            <div class="stat-card" style="border-left-color: #8b5cf6;">
+                <h3>Completed Tasks</h3>
+                <p id="statCompleted">-</p>
+            </div>
+        </div>
+
+        <div class="nav-links">
+            <a href="/students.html" class="btn">Manage Students</a>
+            <a href="/teachers.html" class="btn">Manage Teachers</a>
+            <a href="/subjects.html" class="btn">Manage Subjects</a>
+            <a href="/admin-marks.html" class="btn">Exams & Marksheets</a>
+            <a href="/report-card.html" class="btn report-btn">Report Cards</a>
+            <a href="/analysis.html" class="btn analysis-btn">Performance Analysis</a>
+        </div>
+
+        <section>
+            <h2>System Overview</h2>
+            <p>Welcome to the central management portal for <strong>MABUYE JUNIOR SCHOOL</strong>. Use the navigation buttons above to oversee student records, teacher assignments, assessment activities, mark approvals, and school performance metrics.</p>
+        </section>
+    </div>
+
+    <script>
+        async function loadStats() {
+            try {
+                const res = await fetch('/api/stats');
+                const data = await res.json();
+                document.getElementById('statStudents').textContent = data.students;
+                document.getElementById('statTeachers').textContent = data.teachers;
+                document.getElementById('statSubjects').textContent = data.subjects;
+                document.getElementById('statCompleted').textContent = `${data.completedTasks} / ${data.totalTasks}`;
+            } catch (err) {
+                console.error("Error loading stats:", err);
+            }
+        }
+        loadStats();
+    </script>
+</body>
+</html>

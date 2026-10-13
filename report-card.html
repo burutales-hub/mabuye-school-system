@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Student Report Cards - Mabuye Junior School</title>
+    <style>
+        body { font-family: Arial, sans-serif; background-color: #f4f7f6; margin: 0; padding: 20px; color: #333; }
+        .container { max-width: 900px; margin: auto; background: white; padding: 30px; border-radius: 8px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
+        .card-container { background: white; padding: 30px; border-radius: 8px; border-top: 6px solid #27ae60; margin-bottom: 40px; border: 1px solid #ddd; }
+        .header { text-align: center; margin-bottom: 20px; }
+        .header h1 { margin: 0; color: #2c3e50; font-size: 22px; }
+        .header p { margin: 4px 0; font-size: 13px; color: #555; }
+        .student-info { display: flex; justify-content: space-between; background: #fafafa; padding: 12px; border-radius: 6px; margin-bottom: 20px; border: 1px solid #eaeaea; }
+        table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
+        th, td { border: 1px solid #ddd; padding: 8px; text-align: center; font-size: 13px; }
+        th { background: #34495e; color: white; }
+        .comments { background: #f9f9f9; padding: 12px; border-radius: 6px; font-size: 13px; margin-bottom: 15px; border: 1px solid #eaeaea; }
+        .footer-notes { font-size: 13px; font-weight: bold; margin-bottom: 15px; }
+        .back-link { display: inline-block; margin-bottom: 20px; color: #3498db; text-decoration: none; }
+        .controls { display: flex; gap: 10px; margin-bottom: 20px; flex-wrap: wrap; background: #fafafa; padding: 15px; border-radius: 6px; border: 1px solid #ddd; }
+        button { background: #27ae60; color: white; border: none; padding: 8px 15px; border-radius: 4px; cursor: pointer; }
+        button:hover { background: #219653; }
+        .print-all-btn { background: #2980b9; }
+        .print-all-btn:hover { background: #1f618d; }
+        @media print {
+            body { background: white; padding: 0; }
+            .container > *:not(#reportCardsArea) { display: none; }
+            .card-container { box-shadow: none; border: 1px solid #ccc; page-break-after: always; margin-bottom: 0; }
+            .print-all-btn, .back-link, .controls { display: none; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <a href="/admin-dashboard.html" class="back-link">&larr; Back to Dashboard</a>
+        <h1>Student Assessment Reports Generator</h1>
+
+        <div class="controls">
+            <select id="selectGrade" onchange="fetchStudentsByGrade()" style="padding: 8px;">
+                <option value="">Select Grade</option>
+                <option value="Grade 7">Grade 7</option>
+                <option value="Grade 8">Grade 8</option>
+                <option value="Grade 9">Grade 9</option>
+            </select>
+            <select id="selectTerm" style="padding: 8px;">
+                <option value="Term 1">Term 1</option>
+                <option value="Term 2">Term 2</option>
+                <option value="Term 3">Term 3</option>
+            </select>
+            <button onclick="loadReportCards()">Load Report Cards</button>
+            <button class="print-all-btn" onclick="window.print()">Print All Report Cards</button>
+        </div>
+
+        <div id="reportCardsArea">
+            <p style="text-align: center; color: #777;">Please select a grade and term, then click 'Load Report Cards'.</p>
+        </div>
+    </div>
+
+    <script>
+        let gradeStudents = [];
+
+        async function fetchStudentsByGrade() {
+            const grade = document.getElementById('selectGrade').value;
+            if (!grade) return;
+            const res = await fetch('/api/students');
+            const students = await res.json();
+            gradeStudents = students.filter(s => s.grade === grade);
+        }
+
+        async function loadReportCards() {
+            const grade = document.getElementById('selectGrade').value;
+            const term = document.getElementById('selectTerm').value;
+            if (!grade) {
+                alert('Please select a grade first.');
+                return;
+            }
+
+            const area = document.getElementById('reportCardsArea');
+            area.innerHTML = '<p style="text-align: center;">Loading report cards...</p>';
+
+            if (gradeStudents.length === 0) {
+                area.innerHTML = `<p style="text-align: center; color: red;">No students found in ${grade}.</p>`;
+                return;
+            }
+
+            let allHtml = '';
+
+            for (let student of gradeStudents) {
+                const res = await fetch(`/api/student/report-card/${student.id}?term=${term}`);
+                const data = await res.json();
+
+                let rows = '';
+                data.reports.forEach(r => {
+                    rows += `
+                        <tr>
+                            <td style="text-align: left; padding-left: 8px;">${r.subject_name}</td>
+                            <td>${r.opener}</td>
+                            <td>${r.midterm}</td>
+                            <td>${r.endterm}</td>
+                            <td><b>${r.average}</b></td>
+                            <td><b>${r.rubric}</b></td>
+                            <td><b>${r.points} pts</b></td>
+                        </tr>
+                    `;
+                });
+
+                allHtml += `
+                    <div class="card-container">
+                        <div class="header">
+                            <h1>MABUYE JUNIOR SCHOOL</h1>
+                            <p>P.O. BOX 1628 - 50205, WEBUYE</p>
+                            <p><strong>END TERM ASSESSMENT REPORT - ${term.toUpperCase()}</strong></p>
+                        </div>
+                        <div class="student-info">
+                            <div>
+                                <p><strong>Name:</strong> ${student.name}</p>
+                                <p><strong>Admission No:</strong> ${student.admission_no}</p>
+                            </div>
+                            <div>
+                                <p><strong>Grade:</strong> ${student.grade}</p>
+                            </div>
+                        </div>
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Learning Area</th>
+                                    <th>Opener</th>
+                                    <th>Midterm</th>
+                                    <th>Endterm</th>
+                                    <th>Average</th>
+                                    <th>Rubric</th>
+                                    <th>Points</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${rows}
+                            </tbody>
+                        </table>
+                        <div class="comments">
+                            <p><strong>Class Teacher Comment:</strong> Demonstrating great effort and steady improvement across all examinations.</p>
+                            <p><strong>Head of Institution Comment:</strong> Excellent academic progression. Keep up the high standards.</p>
+                        </div>
+                        <div class="footer-notes">
+                            <p>School Closes on: <strong>05/04/2026</strong> | Opens on: <strong>04/05/2026</strong></p>
+                        </div>
+                    </div>
+                `;
+            }
+
+            area.innerHTML = allHtml;
+        }
+    </script>
+</body>
+</html>

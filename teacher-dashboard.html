@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Teacher Portal - Mabuye Junior School</title>
+    <style>
+        :root { --primary: #1e293b; --accent: #10b981; --bg: #f8fafc; --card: #ffffff; --text: #334155; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: var(--bg); color: var(--text); margin: 0; padding: 20px; }
+        .container { max-width: 1000px; margin: auto; background: var(--card); padding: 35px; border-radius: 12px; box-shadow: 0 10px 25px rgba(0,0,0,0.05); }
+        .header { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #e2e8f0; padding-bottom: 20px; margin-bottom: 25px; }
+        .header h1 { margin: 0; color: var(--primary); font-size: 24px; }
+        .logout-btn { background: #ef4444; color: white; padding: 8px 16px; text-decoration: none; border-radius: 6px; font-weight: 600; font-size: 14px; }
+        .logout-btn:hover { background: #dc2626; }
+        
+        .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 20px; margin-bottom: 30px; }
+        .stat-card { background: #f1f5f9; padding: 20px; border-radius: 8px; border-left: 5px solid var(--accent); }
+        .stat-card h3 { margin: 0 0 8px 0; font-size: 14px; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px; }
+        .stat-card p { margin: 0; font-size: 26px; font-weight: 700; color: var(--primary); }
+
+        .action-banner { background: linear-gradient(135deg, #059669, #10b981); color: white; padding: 20px; border-radius: 8px; display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; }
+        .action-banner a { background: white; color: #065f46; padding: 10px 20px; border-radius: 6px; text-decoration: none; font-weight: bold; }
+        .action-banner a:hover { background: #f0fdf4; }
+
+        table { width: 100%; border-collapse: collapse; margin-top: 15px; }
+        th, td { border: 1px solid #e2e8f0; padding: 12px; text-align: center; font-size: 14px; }
+        th { background: var(--primary); color: white; font-weight: 600; }
+        tr:nth-child(even) { background: #f8fafc; }
+        .status-badge { padding: 4px 10px; border-radius: 12px; font-size: 12px; font-weight: bold; text-transform: uppercase; }
+        .status-pending { background: #fef3c7; color: #d97706; }
+        .status-submitted { background: #e0e7ff; color: #4338ca; }
+        .status-approved { background: #d1fae5; color: #065f46; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div>
+                <h1 id="teacherName">Loading Teacher Profile...</h1>
+                <p id="teacherRole" style="margin: 5px 0 0 0; color: #64748b; font-size: 14px;"></p>
+            </div>
+            <a href="/login.html" class="logout-btn">Logout</a>
+        </div>
+
+        <div class="stats-grid">
+            <div class="stat-card" style="border-left-color: #3b82f6;">
+                <h3>Total Assigned Tasks</h3>
+                <p id="lblTotalTasks">0</p>
+            </div>
+            <div class="stat-card" style="border-left-color: #10b981;">
+                <h3>Completed Tasks</h3>
+                <p id="lblCompletedTasks">0</p>
+            </div>
+            <div class="stat-card" style="border-left-color: #f59e0b;">
+                <h3>Pending Actions</h3>
+                <p id="lblPendingTasks">0</p>
+            </div>
+        </div>
+
+        <div class="action-banner">
+            <div>
+                <h3 style="margin:0 0 5px 0;">Ready to enter assessment marks?</h3>
+                <p style="margin:0; font-size: 14px; opacity: 0.9;">Select active assessments opened by the administration to input student scores.</p>
+            </div>
+            <a href="/marks-entry.html">Enter Marks Now &rarr;</a>
+        </div>
+
+        <h2>My Assessment Tasks & Submissions</h2>
+        <table>
+            <thead>
+                <tr>
+                    <th>Grade</th>
+                    <th>Term</th>
+                    <th>Exam Type</th>
+                    <th>Status</th>
+                    <th>Action Required</th>
+                </tr>
+            </thead>
+            <tbody id="tasksTableBody">
+                <tr><td colspan="5">Loading tasks...</td></tr>
+            </tbody>
+        </table>
+    </div>
+
+    <script>
+        // Extract teacher ID from URL query params (e.g. /teacher-dashboard.html?id=1)
+        const urlParams = new URLSearchParams(window.location.search);
+        const teacherId = urlParams.get('id') || 1; // Default to 1 if testing directly
+
+        async function loadTeacherDashboard() {
+            try {
+                const res = await fetch(`/api/teacher/${teacherId}`);
+                if (!res.ok) throw new Error("Failed to load teacher data");
+                const data = await res.json();
+
+                document.getElementById('teacherName').textContent = `Welcome, ${data.teacher.name}`;
+                document.getElementById('teacherRole').textContent = `Role: ${data.teacher.role} | Assignment: ${data.teacher.assignment || 'General'}`;
+
+                document.getElementById('lblTotalTasks').textContent = data.totalAssigned;
+                document.getElementById('lblCompletedTasks').textContent = data.completedTasks;
+                document.getElementById('lblPendingTasks').textContent = data.totalAssigned - data.completedTasks;
+
+                const tbody = document.getElementById('tasksTableBody');
+                tbody.innerHTML = '';
+
+                if (data.tasks.length === 0) {
+                    tbody.innerHTML = `<tr><td colspan="5" style="color: #64748b; padding: 20px;">No assessment tasks assigned yet.</td></tr>`;
+                    return;
+                }
+
+                data.tasks.forEach(t => {
+                    let badgeClass = 'status-pending';
+                    if (t.status === 'submitted') badgeClass = 'status-submitted';
+                    if (t.status === 'approved') badgeClass = 'status-approved';
+
+                    tbody.innerHTML += `
+                        <tr>
+                            <td><b>${t.grade}</b></td>
+                            <td>${t.term}</td>
+                            <td>${t.exam_type}</td>
+                            <td><span class="status-badge ${badgeClass}">${t.status}</span></td>
+                            <td>${t.status === 'pending' ? '<a href="/marks-entry.html" style="color: #2563eb; font-weight: bold; text-decoration: none;">Enter Marks</a>' : 'Completed'}</td>
+                        </tr>
+                    `;
+                });
+            } catch (err) {
+                console.error(err);
+                document.getElementById('tasksTableBody').innerHTML = `<tr><td colspan="5" style="color: red;">Error loading dashboard data. Please log in again.</td></tr>`;
+            }
+        }
+
+        loadTeacherDashboard();
+    </script>
+</body>
+</html>

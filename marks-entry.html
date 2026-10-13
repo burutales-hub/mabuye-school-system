@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Marks Entry - Mabuye Junior School</title>
+    <style>
+        body { font-family: Arial, sans-serif; background-color: #f4f7f6; margin: 0; padding: 20px; }
+        .container { max-width: 900px; margin: auto; background: white; padding: 30px; border-radius: 8px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
+        h1, h2 { color: #2c3e50; }
+        .controls { display: flex; gap: 15px; margin-bottom: 20px; flex-wrap: wrap; }
+        select, input { padding: 10px; font-size: 16px; border: 1px solid #ccc; border-radius: 4px; }
+        button { background: #27ae60; color: white; border: none; padding: 10px 20px; font-size: 16px; border-radius: 4px; cursor: pointer; }
+        button:hover { background: #219653; }
+        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+        th, td { border: 1px solid #ddd; padding: 10px; text-align: left; }
+        th { background: #34495e; color: white; }
+        .back-link { display: inline-block; margin-bottom: 20px; color: #3498db; text-decoration: none; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <a href="/admin-dashboard.html" class="back-link">&larr; Back to Dashboard</a>
+        <h1>Teacher Marks Entry Portal</h1>
+
+        <div class="controls">
+            <label style="font-weight: bold; align-self: center;">Select Active Assessment Opened by Admin:</label>
+            <select id="activitySelect" onchange="loadOpenActivityStudents()">
+                <option value="">-- Select Active Assessment --</option>
+            </select>
+        </div>
+
+        <form id="marksForm" style="display:none;">
+            <p id="activityDetails" style="font-weight: bold; color: #2980b9;"></p>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Admission No</th>
+                        <th>Student Name</th>
+                        <th>Score (Out of 100)</th>
+                    </tr>
+                </thead>
+                <tbody id="studentsTableBody">
+                    <!-- Loaded dynamically -->
+                </tbody>
+            </table>
+            <br>
+            <button type="submit">Submit Marks</button>
+        </form>
+    </div>
+
+    <script>
+        let activeActivities = [];
+        let selectedActivity = null;
+        let targetStudents = [];
+
+        async function fetchOpenActivities() {
+            try {
+                const res = await fetch('/api/marks/open-activities');
+                activeActivities = await res.json();
+                const select = document.getElementById('activitySelect');
+                select.innerHTML = '<option value="">-- Select Active Assessment --</option>';
+                activeActivities.forEach(act => {
+                    select.innerHTML += `<option value="${act.id}">${act.grade} | ${act.term} | ${act.exam_type} | ${act.subject_name}</option>`;
+                });
+            } catch (err) {
+                console.error("Error loading activities:", err);
+            }
+        }
+
+        async function loadOpenActivityStudents() {
+            const actId = document.getElementById('activitySelect').value;
+            if (!actId) {
+                document.getElementById('marksForm').style.display = 'none';
+                return;
+            }
+
+            selectedActivity = activeActivities.find(a => a.id == actId);
+            document.getElementById('activityDetails').textContent = `Entering marks for: ${selectedActivity.grade} - ${selectedActivity.term} (${selectedActivity.exam_type}) - ${selectedActivity.subject_name}`;
+
+            const res = await fetch('/api/students');
+            const students = await res.json();
+            targetStudents = students.filter(s => s.grade === selectedActivity.grade);
+
+            const tbody = document.getElementById('studentsTableBody');
+            tbody.innerHTML = '';
+
+            targetStudents.forEach(s => {
+                tbody.innerHTML += `
+                    <tr>
+                        <td>${s.admission_no}</td>
+                        <td>${s.name}</td>
+                        <td><input type="number" min="0" max="100" class="score-input" data-id="${s.id}" value="0" required></td>
+                    </tr>
+                `;
+            });
+
+            document.getElementById('marksForm').style.display = 'block';
+        }
+
+        document.getElementById('marksForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const scoresData = [];
+            targetStudents.forEach(s => {
+                const score = document.querySelector(`.score-input[data-id="${s.id}"]`).value;
+                scoresData.push({ student_id: s.id, score });
+            });
+
+            const res = await fetch('/api/marks/submit-scores', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    submission_id: selectedActivity.id,
+                    subject_id: selectedActivity.subject_id,
+                    term: selectedActivity.term,
+                    exam_type: selectedActivity.exam_type,
+                    scoresData
+                })
+            });
+
+            if (res.ok) {
+                alert('Marks submitted successfully!');
+                window.location.reload();
+            } else {
+                alert('Error submitting marks.');
+            }
+        });
+
+        fetchOpenActivities();
+    </script>
+</body>
+</html>

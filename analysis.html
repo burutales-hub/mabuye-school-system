@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Performance Analysis - Mabuye Junior School</title>
+    <style>
+        body { font-family: Arial, sans-serif; background-color: #f4f7f6; margin: 0; padding: 20px; color: #333; }
+        .container { max-width: 1000px; margin: auto; background: white; padding: 30px; border-radius: 8px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
+        h1, h2 { color: #2c3e50; }
+        .controls { display: flex; gap: 15px; margin-bottom: 25px; flex-wrap: wrap; background: #fafafa; padding: 15px; border-radius: 6px; border: 1px solid #ddd; }
+        select, button { padding: 10px; font-size: 15px; border: 1px solid #ccc; border-radius: 4px; }
+        button { background: #27ae60; color: white; border: none; cursor: pointer; }
+        button:hover { background: #219653; }
+        .summary-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-bottom: 30px; }
+        .card { background: #f8f9fa; padding: 20px; border-radius: 6px; border-left: 5px solid #3498db; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
+        .card.green { border-left-color: #27ae60; }
+        .card.orange { border-left-color: #e67e22; }
+        .card h3 { margin: 0 0 10px 0; font-size: 14px; color: #7f8c8d; }
+        .card p { margin: 0; font-size: 20px; font-weight: bold; color: #2c3e50; }
+        table { width: 100%; border-collapse: collapse; margin-top: 15px; }
+        th, td { border: 1px solid #ddd; padding: 10px; text-align: center; font-size: 14px; }
+        th { background: #34495e; color: white; }
+        .back-link { display: inline-block; margin-bottom: 20px; color: #3498db; text-decoration: none; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <a href="/admin-dashboard.html" class="back-link">&larr; Back to Dashboard</a>
+        <h1>School Performance Analysis</h1>
+
+        <div class="controls">
+            <select id="analysisGrade">
+                <option value="All">All JSS Combined (7, 8, & 9)</option>
+                <option value="Grade 7">Grade 7</option>
+                <option value="Grade 8">Grade 8</option>
+                <option value="Grade 9">Grade 9</option>
+            </select>
+            <select id="analysisTerm">
+                <option value="Term 1">Term 1</option>
+                <option value="Term 2">Term 2</option>
+                <option value="Term 3">Term 3</option>
+            </select>
+            <button onclick="loadAnalysis()">Generate Analysis</button>
+        </div>
+
+        <div class="summary-cards" id="summaryCards" style="display:none;">
+            <div class="card">
+                <h3>Total Learners Analyzed</h3>
+                <p id="lblTotal">-</p>
+            </div>
+            <div class="card green">
+                <h3>School Mean Score</h3>
+                <p id="lblMeanScore">-</p>
+            </div>
+            <div class="card orange">
+                <h3>Mean Points</h3>
+                <p id="lblMeanPoints">-</p>
+            </div>
+            <div class="card">
+                <h3>Best Boy</h3>
+                <p id="lblBestBoy" style="font-size: 16px;">-</p>
+            </div>
+            <div class="card green">
+                <h3>Best Girl</h3>
+                <p id="lblBestGirl" style="font-size: 16px;">-</p>
+            </div>
+        </div>
+
+        <div id="rankingsContainer" style="display:none;">
+            <h2>Learner Rankings & Performance Means</h2>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Rank</th>
+                        <th>Admission No</th>
+                        <th>Student Name</th>
+                        <th>Grade</th>
+                        <th>Gender</th>
+                        <th>Total Points</th>
+                        <th>Average Score</th>
+                    </tr>
+                </thead>
+                <tbody id="rankingsTableBody">
+                    <!-- Loaded dynamically -->
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <script>
+        async function loadAnalysis() {
+            const grade = document.getElementById('analysisGrade').value;
+            const term = document.getElementById('analysisTerm').value;
+
+            const res = await fetch(`/api/admin/analysis?grade=${grade}&term=${term}`);
+            const data = await res.json();
+
+            document.getElementById('lblTotal').textContent = data.totalStudents;
+            document.getElementById('lblMeanScore').textContent = data.schoolMeanScore;
+            document.getElementById('lblMeanPoints').textContent = data.schoolMeanPoints;
+
+            document.getElementById('lblBestBoy').textContent = data.bestBoy ? `${data.bestBoy.name} (${data.bestBoy.totalPoints} Pts)` : 'N/A';
+            document.getElementById('lblBestGirl').textContent = data.bestGirl ? `${data.bestGirl.name} (${data.bestGirl.totalPoints} Pts)` : 'N/A';
+
+            const tbody = document.getElementById('rankingsTableBody');
+            tbody.innerHTML = '';
+
+            if (data.rankings.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="7">No records found for this selection.</td></tr>`;
+            } else {
+                data.rankings.forEach((st, index) => {
+                    tbody.innerHTML += `
+                        <tr>
+                            <td><b>#${index + 1}</b></td>
+                            <td>${st.admission_no}</td>
+                            <td style="text-align: left; padding-left: 15px;">${st.name}</td>
+                            <td>${st.grade}</td>
+                            <td>${st.gender}</td>
+                            <td><b>${st.totalPoints}</b></td>
+                            <td><b>${st.avgScore}</b></td>
+                        </tr>
+                    `;
+                });
+            }
+
+            document.getElementById('summaryCards').style.display = 'grid';
+            document.getElementById('rankingsContainer').style.display = 'block';
+        }
+
+        loadAnalysis();
+    </script>
+</body>
+</html>

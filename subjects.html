@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Manage Subjects - Mabuye Junior School</title>
+    <style>
+        body { font-family: Arial, sans-serif; background-color: #f4f7f6; margin: 0; padding: 20px; }
+        .container { max-width: 800px; margin: auto; background: white; padding: 30px; border-radius: 8px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
+        h1, h2 { color: #2c3e50; }
+        form { display: flex; flex-direction: column; gap: 15px; margin-bottom: 30px; background: #fafafa; padding: 20px; border-radius: 6px; border: 1px solid #eaeaea; }
+        input { padding: 10px; font-size: 16px; border: 1px solid #ccc; border-radius: 4px; }
+        button { background: #27ae60; color: white; border: none; padding: 12px; font-size: 16px; border-radius: 4px; cursor: pointer; }
+        button:hover { background: #219653; }
+        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+        th, td { border: 1px solid #ddd; padding: 10px; text-align: left; }
+        th { background: #34495e; color: white; }
+        .back-link { display: inline-block; margin-bottom: 20px; color: #3498db; text-decoration: none; }
+        .back-link:hover { text-decoration: underline; }
+        .delete-btn { background: #e74c3c; color: white; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-size: 14px; }
+        .delete-btn:hover { background: #c0392b; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <a href="/admin-dashboard.html" class="back-link">&larr; Back to Dashboard</a>
+        <h1>Manage Subjects & Learning Areas</h1>
+
+        <form id="subjectForm">
+            <input type="text" id="subject_code" placeholder="Subject Code (e.g., ENG101)" required>
+            <input type="text" id="subject_name" placeholder="Subject Name / Learning Area (e.g., English)" required>
+            <button type="submit">Add Subject</button>
+        </form>
+
+        <h2>Subjects List</h2>
+        <table>
+            <thead>
+                <tr>
+                    <th>Subject Code</th>
+                    <th>Subject Name</th>
+                    <th>Action</th>
+                </tr>
+            </thead>
+            <tbody id="subjectTableBody">
+                <!-- Dynamically loaded subjects -->
+            </tbody>
+        </table>
+    </div>
+
+    <script>
+        async function fetchSubjects() {
+            try {
+                const res = await fetch('/api/subjects');
+                const subjects = await res.json();
+                const tbody = document.getElementById('subjectTableBody');
+                tbody.innerHTML = '';
+                subjects.forEach(sub => {
+                    tbody.innerHTML += `
+                        <tr>
+                            <td>${sub.subject_code}</td>
+                            <td>${sub.subject_name}</td>
+                            <td><button class="delete-btn" onclick="deleteSubject(${sub.id})">Delete</button></td>
+                        </tr>
+                    `;
+                });
+            } catch (err) {
+                console.error("Error fetching subjects:", err);
+            }
+        }
+
+        document.getElementById('subjectForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const subject_code = document.getElementById('subject_code').value;
+            const subject_name = document.getElementById('subject_name').value;
+
+            try {
+                const res = await fetch('/api/subjects', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ subject_code, subject_name })
+                });
+                
+                if (res.ok) {
+                    document.getElementById('subjectForm').reset();
+                    fetchSubjects();
+                } else {
+                    const errorText = await res.text();
+                    alert('Error adding subject: ' + errorText);
+                }
+            } catch (err) {
+                console.error("Error:", err);
+                alert('Network error adding subject.');
+            }
+        });
+
+        async function deleteSubject(id) {
+            if (confirm('Delete this subject?')) {
+                await fetch(`/api/subjects/${id}`, { method: 'DELETE' });
+                fetchSubjects();
+            }
+        }
+
+        fetchSubjects();
+    </script>
+</body>
+</html>

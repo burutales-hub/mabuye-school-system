@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Manage Teachers - Mabuye Junior School</title>
+    <style>
+        body { font-family: Arial, sans-serif; background-color: #f4f7f6; margin: 0; padding: 20px; }
+        .container { max-width: 950px; margin: auto; background: white; padding: 30px; border-radius: 8px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
+        h1, h2 { color: #2c3e50; }
+        form { display: flex; flex-direction: column; gap: 15px; margin-bottom: 30px; background: #fafafa; padding: 20px; border-radius: 6px; border: 1px solid #eaeaea; }
+        input, select { padding: 10px; font-size: 16px; border: 1px solid #ccc; border-radius: 4px; }
+        button { background: #27ae60; color: white; border: none; padding: 12px; font-size: 16px; border-radius: 4px; cursor: pointer; }
+        button:hover { background: #219653; }
+        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+        th, td { border: 1px solid #ddd; padding: 10px; text-align: left; }
+        th { background: #34495e; color: white; }
+        .back-link { display: inline-block; margin-bottom: 20px; color: #3498db; text-decoration: none; }
+        .back-link:hover { text-decoration: underline; }
+        .status-active { color: green; font-weight: bold; }
+        .status-suspended { color: red; font-weight: bold; }
+        .suspend-btn { background: #e67e22; color: white; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; }
+        .suspend-btn:hover { background: #d35400; }
+        .auth-btn { background: #27ae60; color: white; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; }
+        .auth-btn:hover { background: #219653; }
+        .dynamic-section { display: none; flex-direction: column; gap: 10px; background: #f0f3f4; padding: 12px; border-radius: 4px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <a href="/admin-dashboard.html" class="back-link">&larr; Back to Dashboard</a>
+        <h1>Manage Teachers & Roles</h1>
+
+        <form id="teacherForm">
+            <input type="text" id="name" placeholder="Teacher Full Name (e.g., John Doe)" required>
+            
+            <select id="role" required onchange="handleRoleChange()">
+                <option value="">Select Role</option>
+                <option value="Admin">Admin</option>
+                <option value="Class Teacher">Class Teacher</option>
+                <option value="Subject Teacher">Subject Teacher</option>
+            </select>
+
+            <!-- Conditional assignment section for Class or Subject Teachers -->
+            <div id="assignmentSection" class="dynamic-section">
+                <label id="assignmentLabel" style="font-weight: bold; color: #34495e;"></label>
+                <select id="gradeSelect">
+                    <option value="">Select Grade</option>
+                    <option value="Grade 7">Grade 7</option>
+                    <option value="Grade 8">Grade 8</option>
+                    <option value="Grade 9">Grade 9</option>
+                </select>
+                <select id="subjectSelect" style="display: none;">
+                    <option value="">Select Learning Area (Subject)</option>
+                </select>
+            </div>
+
+            <input type="text" id="username" placeholder="Login Username" required>
+            <input type="password" id="password" placeholder="Login Password" required>
+            <button type="submit">Register Teacher</button>
+        </form>
+
+        <h2>Registered Teachers List</h2>
+        <table>
+            <thead>
+                <tr>
+                    <th>Name</th>
+                    <th>Role</th>
+                    <th>Assignment / Details</th>
+                    <th>Username</th>
+                    <th>Status</th>
+                    <th>Action</th>
+                </tr>
+            </thead>
+            <tbody id="teacherTableBody">
+                <!-- Dynamically loaded teachers -->
+            </tbody>
+        </table>
+    </div>
+
+    <script>
+        let availableSubjects = [];
+
+        async function loadSubjects() {
+            try {
+                const res = await fetch('/api/subjects');
+                availableSubjects = await res.json();
+                const subjectSelect = document.getElementById('subjectSelect');
+                subjectSelect.innerHTML = '<option value="">Select Learning Area (Subject)</option>';
+                availableSubjects.forEach(sub => {
+                    subjectSelect.innerHTML += `<option value="${sub.subject_name}">${sub.subject_name} (${sub.subject_code})</option>`;
+                });
+            } catch (err) {
+                console.error("Error loading subjects:", err);
+            }
+        }
+
+        function handleRoleChange() {
+            const role = document.getElementById('role').value;
+            const assignmentSection = document.getElementById('assignmentSection');
+            const assignmentLabel = document.getElementById('assignmentLabel');
+            const gradeSelect = document.getElementById('gradeSelect');
+            const subjectSelect = document.getElementById('subjectSelect');
+
+            if (role === 'Class Teacher') {
+                assignmentSection.style.display = 'flex';
+                assignmentLabel.textContent = "Assign Class (Grade):";
+                gradeSelect.style.display = 'block';
+                subjectSelect.style.display = 'none';
+                subjectSelect.value = '';
+            } else if (role === 'Subject Teacher') {
+                assignmentSection.style.display = 'flex';
+                assignmentLabel.textContent = "Assign Learning Area and Grade:";
+                gradeSelect.style.display = 'block';
+                subjectSelect.style.display = 'block';
+            } else {
+                assignmentSection.style.display = 'none';
+                gradeSelect.value = '';
+                subjectSelect.value = '';
+            }
+        }
+
+        async function fetchTeachers() {
+            try {
+                const res = await fetch('/api/teachers');
+                const teachers = await res.json();
+                const tbody = document.getElementById('teacherTableBody');
+                tbody.innerHTML = '';
+                teachers.forEach(t => {
+                    const isSuspended = t.status === 'suspended';
+                    tbody.innerHTML += `
+                        <tr>
+                            <td>${t.name || 'N/A'}</td>
+                            <td>${t.role}</td>
+                            <td>${t.assignment || 'N/A'}</td>
+                            <td>${t.username}</td>
+                            <td><span class="${isSuspended ? 'status-suspended' : 'status-active'}">${t.status.toUpperCase()}</span></td>
+                            <td>
+                                ${isSuspended 
+                                    ? `<button class="auth-btn" onclick="updateStatus(${t.id}, 'active')">Authorize</button>` 
+                                    : `<button class="suspend-btn" onclick="updateStatus(${t.id}, 'suspended')">Suspend</button>`
+                                }
+                            </td>
+                        </tr>
+                    `;
+                });
+            } catch (err) {
+                console.error("Error fetching teachers:", err);
+            }
+        }
+
+        document.getElementById('teacherForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const name = document.getElementById('name').value;
+            const role = document.getElementById('role').value;
+            const grade = document.getElementById('gradeSelect').value;
+            const subject = document.getElementById('subjectSelect').value;
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+
+            let assignment = '';
+            if (role === 'Class Teacher') {
+                assignment = grade;
+            } else if (role === 'Subject Teacher') {
+                assignment = `${subject} - ${grade}`;
+            } else {
+                assignment = 'Full System Access';
+            }
+
+            try {
+                const res = await fetch('/api/teachers', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ name, role, assignment, username, password })
+                });
+                
+                if (res.ok) {
+                    document.getElementById('teacherForm').reset();
+                    document.getElementById('assignmentSection').style.display = 'none';
+                    fetchTeachers();
+                } else {
+                    const errorText = await res.text();
+                    alert('Error registering teacher: ' + errorText);
+                }
+            } catch (err) {
+                console.error("Error:", err);
+                alert('Network error registering teacher.');
+            }
+        });
+
+        async function updateStatus(id, status) {
+            await fetch(`/api/teachers/${id}/status`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ status })
+            });
+            fetchTeachers();
+        }
+
+        loadSubjects();
+        fetchTeachers();
+    </script>
+</body>
+</html>

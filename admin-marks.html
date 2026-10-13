@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Exams & Marksheet Management - Mabuye Junior School</title>
+    <style>
+        body { font-family: Arial, sans-serif; background-color: #f4f7f6; margin: 0; padding: 20px; }
+        .container { max-width: 1200px; margin: auto; background: white; padding: 30px; border-radius: 8px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
+        h1, h2 { color: #2c3e50; }
+        .section { margin-bottom: 40px; padding-bottom: 20px; border-bottom: 1px solid #ddd; }
+        form { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 15px; background: #fafafa; padding: 15px; border-radius: 6px; border: 1px solid #eaeaea; }
+        select, input { padding: 8px; font-size: 14px; border: 1px solid #ccc; border-radius: 4px; }
+        button { background: #27ae60; color: white; border: none; padding: 10px 15px; font-size: 14px; border-radius: 4px; cursor: pointer; }
+        button:hover { background: #219653; }
+        table { width: 100%; border-collapse: collapse; margin-top: 15px; }
+        th, td { border: 1px solid #ddd; padding: 8px; text-align: center; font-size: 13px; }
+        th { background: #34495e; color: white; }
+        .approve-btn { background: #2980b9; color: white; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer; }
+        .approve-btn:hover { background: #1f618d; }
+        .back-link { display: inline-block; margin-bottom: 20px; color: #3498db; text-decoration: none; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <a href="/admin-dashboard.html" class="back-link">&larr; Back to Dashboard</a>
+        <h1>Exams, Marksheets & Approvals</h1>
+
+        <!-- SECTION 1: Open Activity -->
+        <div class="section">
+            <h2>1. Open Assessment Activity for Teachers</h2>
+            <form id="openActivityForm">
+                <select id="openGrade" required>
+                    <option value="">Select Grade</option>
+                    <option value="Grade 7">Grade 7</option>
+                    <option value="Grade 8">Grade 8</option>
+                    <option value="Grade 9">Grade 9</option>
+                </select>
+                <select id="openTerm" required>
+                    <option value="Term 1">Term 1</option>
+                    <option value="Term 2">Term 2</option>
+                    <option value="Term 3">Term 3</option>
+                </select>
+                <select id="openExamType" required>
+                    <option value="Opener">Opener</option>
+                    <option value="Midterm">Midterm</option>
+                    <option value="Endterm">Endterm</option>
+                </select>
+                <select id="openSubject" required>
+                    <option value="">Select Subject</option>
+                </select>
+                <select id="openTeacher" required>
+                    <option value="">Select Teacher</option>
+                </select>
+                <button type="submit">Open Activity</button>
+            </form>
+        </div>
+
+        <!-- SECTION 2: Pending Submissions & Approvals -->
+        <div class="section">
+            <h2>2. Review & Approve Teacher Submissions</h2>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Grade</th>
+                        <th>Term</th>
+                        <th>Exam Type</th>
+                        <th>Subject</th>
+                        <th>Teacher</th>
+                        <th>Status</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody id="submissionsTableBody">
+                    <!-- Loaded dynamically -->
+                </tbody>
+            </table>
+        </div>
+
+        <!-- SECTION 3: Class Marksheet Generator -->
+        <div class="section">
+            <h2>3. Class Marksheet & Report Generator</h2>
+            <form id="marksheetForm">
+                <select id="sheetGrade" required>
+                    <option value="">Select Grade</option>
+                    <option value="Grade 7">Grade 7</option>
+                    <option value="Grade 8">Grade 8</option>
+                    <option value="Grade 9">Grade 9</option>
+                </select>
+                <select id="sheetTerm" required>
+                    <option value="Term 1">Term 1</option>
+                    <option value="Term 2">Term 2</option>
+                    <option value="Term 3">Term 3</option>
+                </select>
+                <select id="sheetExamType" required>
+                    <option value="Opener">Opener</option>
+                    <option value="Midterm">Midterm</option>
+                    <option value="Endterm">Endterm</option>
+                </select>
+                <button type="submit">Generate Marksheet</button>
+            </form>
+
+            <div id="marksheetContainer" style="overflow-x: auto; margin-top: 20px;">
+                <!-- Marksheet table renders here with vertical students and horizontal subjects -->
+            </div>
+        </div>
+    </div>
+
+    <script>
+        async function loadDropdowns() {
+            const subRes = await fetch('/api/subjects');
+            const subjects = await subRes.json();
+            const openSubject = document.getElementById('openSubject');
+            subjects.forEach(s => {
+                openSubject.innerHTML += `<option value="${s.id}">${s.subject_name} (${s.subject_code})</option>`;
+            });
+
+            const techRes = await fetch('/api/teachers');
+            const teachers = await techRes.json();
+            const openTeacher = document.getElementById('openTeacher');
+            teachers.forEach(t => {
+                openTeacher.innerHTML += `<option value="${t.id}">${t.name} (${t.role})</option>`;
+            });
+
+            loadSubmissions();
+        }
+
+        async function loadSubmissions() {
+            const res = await fetch('/api/admin/submissions');
+            const submissions = await res.json();
+            const tbody = document.getElementById('submissionsTableBody');
+            tbody.innerHTML = '';
+
+            submissions.forEach(sub => {
+                tbody.innerHTML += `
+                    <tr>
+                        <td>${sub.grade}</td>
+                        <td>${sub.term}</td>
+                        <td>${sub.exam_type}</td>
+                        <td>${sub.subject_name}</td>
+                        <td>${sub.teacher_name}</td>
+                        <td><b>${sub.status.toUpperCase()}</b></td>
+                        <td>
+                            ${sub.status !== 'approved' 
+                                ? `<button class="approve-btn" onclick="approveMarks(${sub.id})">Unlock & Approve</button>` 
+                                : 'Approved'}
+                        </td>
+                    </tr>
+                `;
+            });
+        }
+
+        document.getElementById('openActivityForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const data = {
+                grade: document.getElementById('openGrade').value,
+                term: document.getElementById('openTerm').value,
+                exam_type: document.getElementById('openExamType').value,
+                subject_id: document.getElementById('openSubject').value,
+                teacher_id: document.getElementById('openTeacher').value
+            };
+
+            const res = await fetch('/api/admin/open-activity', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(data)
+            });
+
+            if (res.ok) {
+                alert('Activity successfully opened for teacher.');
+                loadSubmissions();
+            } else {
+                alert('Error opening activity.');
+            }
+        });
+
+        async function approveMarks(id) {
+            const res = await fetch(`/api/admin/approve-marks/${id}`, { method: 'PUT' });
+            if (res.ok) {
+                alert('Marks approved and unlocked!');
+                loadSubmissions();
+            } else {
+                alert('Approval failed.');
+            }
+        }
+
+        document.getElementById('marksheetForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const grade = document.getElementById('sheetGrade').value;
+            const term = document.getElementById('sheetTerm').value;
+            const exam_type = document.getElementById('sheetExamType').value;
+
+            const res = await fetch(`/api/admin/marksheet?grade=${grade}&term=${term}&exam_type=${exam_type}`);
+            const data = await res.json();
+
+            const container = document.getElementById('marksheetContainer');
+            if (data.students.length === 0) {
+                container.innerHTML = '<p>No students found for this selection.</p>';
+                return;
+            }
+
+            // Build vertical student rows and horizontal subject columns
+            let html = `<table><thead><tr><th>Adm No</th><th>Student Name</th>`;
+            data.subjects.forEach(s => {
+                html += `<th>${s.subject_name}<br><small>(${s.subject_code})</small></th>`;
+            });
+            html += `</tr></thead><tbody>`;
+
+            data.students.forEach(st => {
+                html += `<tr><td><b>${st.admission_no}</b></td><td style="text-align: left; padding-left: 10px;">${st.name}</td>`;
+                data.subjects.forEach(sub => {
+                    const mark = data.marks.find(m => m.student_id === st.id && m.subject_id === sub.id);
+                    html += `<td>${mark ? `${mark.score} <br><span style="color:#27ae60; font-weight:bold;">${mark.rubric} (${mark.points}pt)</span>` : '-'}</td>`;
+                });
+                html += `</tr>`;
+            });
+
+            html += `</tbody></table>`;
+            container.innerHTML = html;
+        });
+
+        loadDropdowns();
+    </script>
+</body>
+</html>
